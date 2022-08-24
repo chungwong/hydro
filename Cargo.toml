@@ -1,0 +1,29 @@
+[package]
+name = "hydro"
+version = "0.1.0"
+authors = ["Chung Wong <wch705@gmail.com>"]
+edition = "2021"
+resolver = "2"
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
+
+[features]
+pio = ["esp-idf-sys/pio"]
+
+[dependencies]
+anyhow = "*"
+embedded-svc = "*"
+esp-idf-svc = "*"
+esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
+log = "*"
+time = { version = "0.3.13" }
+
+
+[build-dependencies]
+anyhow = "1"
+embuild = "0.29"

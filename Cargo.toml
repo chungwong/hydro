@@ -16,14 +16,14 @@ opt-level = "z"
 pio = ["esp-idf-sys/pio"]
 
 [dependencies]
-anyhow = "*"
-embedded-svc = "*"
-esp-idf-svc = { version = "*", features = ["experimental", "alloc"] }
+anyhow = "1.0.62"
+embedded-svc = "0.22.1"
+esp-idf-svc = { version = "0.42.3", features = ["experimental", "alloc"] }
 esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
-log = "*"
+log = "0.4.17"
 time = { version = "0.3.13" }
 
 
 [build-dependencies]
-anyhow = "1"
+anyhow = "1.0.62"
 embuild = "0.29"

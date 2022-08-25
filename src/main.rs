@@ -1,14 +1,12 @@
+mod server;
 mod wifi;
 
-use anyhow::bail;
-use log::*;
 use std::{thread, time::Duration};
 use time::OffsetDateTime;
 
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
-use embedded_svc::{ipv4, ping::Ping};
-use esp_idf_svc::{ping, sntp};
+use esp_idf_svc::sntp;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASS: &str = env!("WIFI_PASS");
@@ -29,23 +27,11 @@ fn main() -> anyhow::Result<()> {
 
     let _sntp = sntp::EspSntp::new_default()?;
 
+    let _server = server::start();
+
     loop {
-        // ping(ipv4::Ipv4Addr::new(142,250,70,238));
         dbg!(OffsetDateTime::now_utc().hour());
 
         thread::sleep(Duration::from_secs(5));
     }
-}
-
-fn ping(ip_settings: ipv4::Ipv4Addr) -> anyhow::Result<()> {
-    info!("About to do some pings for {:?}", ip_settings);
-
-    let ping_summary = ping::EspPing::default().ping(ip_settings, &Default::default())?;
-    if ping_summary.transmitted != ping_summary.received {
-        bail!("Pinging gateway {} resulted in timeouts", ip_settings);
-    }
-
-    info!("Pinging done");
-
-    Ok(())
 }

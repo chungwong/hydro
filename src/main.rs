@@ -7,6 +7,7 @@ use std::thread;
 
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
+use esp_idf_hal::peripherals::Peripherals;
 use esp_idf_svc::sntp;
 
 const SSID: &str = env!("WIFI_SSID");
@@ -30,7 +31,8 @@ fn main() -> anyhow::Result<()> {
 
     let _server = server::start();
 
-    let mut light = light::Light::new()?;
+    let peripherals = Peripherals::take().unwrap();
+    let mut light = light::Light::new(peripherals.pins.gpio20.into_output()?);
 
     light.toggle();
 

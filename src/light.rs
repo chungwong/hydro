@@ -3,19 +3,15 @@ use log::info;
 use std::thread;
 
 use embedded_hal::digital::blocking::OutputPin;
-use esp_idf_hal::{gpio, peripherals::Peripherals};
 
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
-pub(crate) struct Light {
-    pin: gpio::Gpio20<gpio::Output>,
+pub(crate) struct Light<T: OutputPin + Send> {
+    pin: T,
 }
 
-impl Light {
-    pub(crate) fn new() -> anyhow::Result<Self> {
-        let peripherals = Peripherals::take().unwrap();
-        let pin = peripherals.pins.gpio20.into_output()?;
-
-        Ok(Self { pin })
+impl<T: OutputPin + Send> Light<T> {
+    pub(crate) fn new(pin: T) -> Self {
+        Self { pin }
     }
 
     pub(crate) fn toggle(&mut self) {

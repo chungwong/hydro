@@ -1,8 +1,9 @@
+mod light;
 mod server;
 mod wifi;
 
-use std::{thread, time::Duration};
-use time::OffsetDateTime;
+use core::time::Duration;
+use std::thread;
 
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
@@ -29,9 +30,11 @@ fn main() -> anyhow::Result<()> {
 
     let _server = server::start();
 
-    loop {
-        dbg!(OffsetDateTime::now_utc().hour());
+    let mut light = light::Light::new()?;
 
+    light.toggle();
+
+    loop {
         thread::sleep(Duration::from_secs(5));
     }
 }

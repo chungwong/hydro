@@ -17,11 +17,13 @@ pio = ["esp-idf-sys/pio"]
 
 [dependencies]
 anyhow = "1.0.62"
+embedded-hal = "1.0.0-alpha.8"
 embedded-svc = "0.22.1"
 esp-idf-svc = { version = "0.42.3", features = ["experimental", "alloc"] }
 esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
+esp-idf-hal = "0.38.0"
 log = "0.4.17"
-time = { version = "0.3.13" }
+time = { version = "0.3.13", features = ["formatting"] }
 
 
 [build-dependencies]

@@ -34,3 +34,4 @@ ESP_IDF_VERSION = { value = "tag:v4.4.1" }
 # Enables the esp-idf-sys "native" build feature (`cargo build --features native`) to build against ESP-IDF master (mainline)
 #ESP_IDF_VERSION = { value = "master" }
 ESP_IDF_TOOLS_INSTALL_DIR = { value = "global" }
+ESP_IDF_SDKCONFIG_DEFAULTS = { value = "./sdkconfig.defaults", relative = true }

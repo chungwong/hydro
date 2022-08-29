@@ -1,27 +1,30 @@
 use core::{ops::RangeBounds, time::Duration};
 use log::info;
-use std::thread;
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
+
+use std::fmt::Debug;
 
 use embedded_hal::digital::blocking::OutputPin;
 
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
-pub(crate) struct Light<T, R, I>
+pub(crate) struct Light<T, R>
 where
-    T: OutputPin + Send,
-    R: RangeBounds<u8>,
-    I: Iterator<Item = R> + Send,
+    T: OutputPin + Send + 'static,
+    R: RangeBounds<u8> + 'static + Debug + Send,
 {
     pin: T,
-    hour_ranges: I,
+    hour_ranges: Vec<R>,
 }
 
-impl<T, R, I> Light<T, R, I>
+impl<T, R> Light<T, R>
 where
-    T: OutputPin + Send,
-    R: RangeBounds<u8>,
-    I: Iterator<Item = R> + Send,
+    T: OutputPin + Send + 'static,
+    R: RangeBounds<u8> + 'static + Debug + Send,
 {
-    pub(crate) fn new(pin: T, hour_ranges: I) -> Self {
+    pub(crate) fn new(pin: T, hour_ranges: Vec<R>) -> Self {
         Self { pin, hour_ranges }
     }
 
@@ -51,33 +54,33 @@ where
     /// 21      9          8
     /// 22     10          9
     /// 23     11         10
-    pub(crate) fn toggle(&mut self) {
-        thread::scope(|s| {
-            s.spawn(|| {
-                loop {
-                    let utc_now = OffsetDateTime::now_utc();
-                    info!(
-                        "{:?} checking time to toggle light",
-                        utc_now.format(&Rfc3339)
-                    );
+    pub(crate) fn toggle(light: Arc<Mutex<Light<T, R>>>) {
+        thread::spawn(move || loop {
+            let utc_now = OffsetDateTime::now_utc();
 
-                    let sleep_secs = if utc_now.year() == 1970 {
-                        // sntp is not synced yet
-                        1
-                    } else {
-                        let hour = utc_now.hour();
+            info!(
+                "{:?} checking time to toggle light",
+                utc_now.format(&Rfc3339)
+            );
 
-                        if self.hour_ranges.any(|range| range.contains(&hour)) {
-                            info!("turning on light {:?}", self.pin.set_high());
-                        } else {
-                            info!("turning off light {:?}", self.pin.set_low());
-                        }
-                        3600
-                    };
+            let mut light = light.lock().unwrap();
 
-                    thread::sleep(Duration::from_secs(sleep_secs));
+            let sleep_secs = if utc_now.year() == 1970 {
+                // sntp is not synced yet
+                info!("turning off light {:?}", light.pin.set_low());
+                1
+            } else {
+                let hour = utc_now.hour();
+
+                if light.hour_ranges.iter().any(|range| range.contains(&hour)) {
+                    info!("turning on light {:?}", light.pin.set_high());
+                } else {
+                    info!("turning off light {:?}", light.pin.set_low());
                 }
-            });
+                3600
+            };
+
+            thread::sleep(Duration::from_secs(sleep_secs));
         });
     }
 }

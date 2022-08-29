@@ -3,12 +3,17 @@ mod server;
 mod wifi;
 
 use core::time::Duration;
-use std::thread;
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
 
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
 use esp_idf_hal::peripherals::Peripherals;
 use esp_idf_svc::sntp;
+
+use crate::light::Light;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASS: &str = env!("WIFI_PASS");
@@ -32,12 +37,13 @@ fn main() -> anyhow::Result<()> {
     let _server = server::start();
 
     let peripherals = Peripherals::take().unwrap();
-    let mut light = light::Light::new(
-        peripherals.pins.gpio20.into_output()?,
-        vec![0..=11, 20..=23].into_iter(),
-    );
 
-    light.toggle();
+    let light = Arc::new(Mutex::new(Light::new(
+        peripherals.pins.gpio20.into_output()?,
+        vec![0..=11, 20..=23],
+    )));
+
+    Light::toggle(light);
 
     loop {
         thread::sleep(Duration::from_secs(5));

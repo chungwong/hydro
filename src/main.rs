@@ -32,7 +32,10 @@ fn main() -> anyhow::Result<()> {
     let _server = server::start();
 
     let peripherals = Peripherals::take().unwrap();
-    let mut light = light::Light::new(peripherals.pins.gpio0.into_output()?);
+    let mut light = light::Light::new(
+        peripherals.pins.gpio20.into_output()?,
+        vec![0..=11, 20..=23].into_iter(),
+    );
 
     light.toggle();
 

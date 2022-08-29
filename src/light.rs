@@ -1,17 +1,28 @@
-use core::time::Duration;
+use core::{ops::RangeBounds, time::Duration};
 use log::info;
 use std::thread;
 
 use embedded_hal::digital::blocking::OutputPin;
 
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
-pub(crate) struct Light<T: OutputPin + Send> {
+pub(crate) struct Light<T, R, I>
+where
+    T: OutputPin + Send,
+    R: RangeBounds<u8>,
+    I: Iterator<Item = R> + Send,
+{
     pin: T,
+    hour_ranges: I,
 }
 
-impl<T: OutputPin + Send> Light<T> {
-    pub(crate) fn new(pin: T) -> Self {
-        Self { pin }
+impl<T, R, I> Light<T, R, I>
+where
+    T: OutputPin + Send,
+    R: RangeBounds<u8>,
+    I: Iterator<Item = R> + Send,
+{
+    pub(crate) fn new(pin: T, hour_ranges: I) -> Self {
+        Self { pin, hour_ranges }
     }
 
     /// Mapping for UTC and local time zones
@@ -54,14 +65,13 @@ impl<T: OutputPin + Send> Light<T> {
                         // sntp is not synced yet
                         1
                     } else {
-                        match utc_now.hour() {
-                            0..=11 | 20..=23 => {
-                                info!("turning on light {:?}", self.pin.set_high());
-                            }
-                            _ => {
-                                info!("turning off light {:?}", self.pin.set_low());
-                            }
-                        };
+                        let hour = utc_now.hour();
+
+                        if self.hour_ranges.any(|range| range.contains(&hour)) {
+                            info!("turning on light {:?}", self.pin.set_high());
+                        } else {
+                            info!("turning off light {:?}", self.pin.set_low());
+                        }
                         3600
                     };
 

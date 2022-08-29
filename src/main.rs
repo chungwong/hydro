@@ -11,7 +11,12 @@ use std::{
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
 use esp_idf_hal::peripherals::Peripherals;
-use esp_idf_svc::sntp;
+use esp_idf_svc::{
+    sntp,
+    netif::EspNetifStack, nvs::EspDefaultNvs, sysloop::EspSysLoopStack,
+};
+use esp_idf_svc::nvs_storage::EspNvsStorage;
+
 
 use crate::light::Light;
 
@@ -24,8 +29,12 @@ fn main() -> anyhow::Result<()> {
     esp_idf_sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
+    let netif_stack = Arc::new(EspNetifStack::new()?);
+    let sys_loop_stack = Arc::new(EspSysLoopStack::new()?);
+    let default_nvs = Arc::new(EspDefaultNvs::new()?);
+
     // Connect to the Wi-Fi network
-    let _wifi = match wifi::wifi(SSID, PASS) {
+    let _wifi = match wifi::wifi(netif_stack.clone(), sys_loop_stack.clone(), default_nvs.clone(), SSID, PASS) {
         Ok(inner) => inner,
         Err(err) => {
             anyhow::bail!("could not connect to Wi-Fi network: {:?}", err)
@@ -34,7 +43,8 @@ fn main() -> anyhow::Result<()> {
 
     let _sntp = sntp::EspSntp::new_default()?;
 
-    let _server = server::start();
+    let storage = Arc::new(Mutex::new(EspNvsStorage::new_default(default_nvs.clone(), "my_area", true)?));
+    let _server = server::start(storage.clone());
 
     let peripherals = Peripherals::take().unwrap();
 

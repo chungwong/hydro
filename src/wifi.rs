@@ -13,12 +13,9 @@ use log::info;
 #[allow(unused)]
 pub struct Wifi {
     pub esp_wifi: EspWifi,
-    pub netif_stack: Arc<EspNetifStack>,
-    pub sys_loop_stack: Arc<EspSysLoopStack>,
-    pub default_nvs: Arc<EspDefaultNvs>,
 }
 
-pub fn wifi(ssid: &str, psk: &str) -> anyhow::Result<Wifi> {
+pub fn wifi(netif_stack: Arc<EspNetifStack>, sys_loop_stack: Arc<EspSysLoopStack>, default_nvs: Arc<EspDefaultNvs>, ssid: &str, psk: &str) -> anyhow::Result<Wifi> {
     let mut auth_method = AuthMethod::WPA2Personal;
     if ssid.is_empty() {
         anyhow::bail!("missing WiFi name")
@@ -27,13 +24,11 @@ pub fn wifi(ssid: &str, psk: &str) -> anyhow::Result<Wifi> {
         auth_method = AuthMethod::None;
         info!("Wifi password is empty");
     }
-    let netif_stack = Arc::new(EspNetifStack::new()?);
-    let sys_loop_stack = Arc::new(EspSysLoopStack::new()?);
-    let default_nvs = Arc::new(EspDefaultNvs::new()?);
+
     let mut wifi = EspWifi::new(
-        netif_stack.clone(),
-        sys_loop_stack.clone(),
-        default_nvs.clone(),
+        netif_stack,
+        sys_loop_stack,
+        default_nvs,
     )?;
 
     info!("Searching for Wifi network {}", ssid);
@@ -84,9 +79,6 @@ pub fn wifi(ssid: &str, psk: &str) -> anyhow::Result<Wifi> {
 
     let wifi = Wifi {
         esp_wifi: wifi,
-        netif_stack,
-        sys_loop_stack,
-        default_nvs,
     };
 
     Ok(wifi)

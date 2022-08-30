@@ -11,11 +11,17 @@ use esp_idf_svc::{
 use log::info;
 
 #[allow(unused)]
-pub struct Wifi {
+pub(crate) struct Wifi {
     pub esp_wifi: EspWifi,
 }
 
-pub fn wifi(netif_stack: Arc<EspNetifStack>, sys_loop_stack: Arc<EspSysLoopStack>, default_nvs: Arc<EspDefaultNvs>, ssid: &str, psk: &str) -> anyhow::Result<Wifi> {
+pub(crate) fn wifi(
+    netif_stack: Arc<EspNetifStack>,
+    sys_loop_stack: Arc<EspSysLoopStack>,
+    default_nvs: Arc<EspDefaultNvs>,
+    ssid: &str,
+    psk: &str,
+) -> anyhow::Result<Wifi> {
     let mut auth_method = AuthMethod::WPA2Personal;
     if ssid.is_empty() {
         anyhow::bail!("missing WiFi name")
@@ -25,11 +31,7 @@ pub fn wifi(netif_stack: Arc<EspNetifStack>, sys_loop_stack: Arc<EspSysLoopStack
         info!("Wifi password is empty");
     }
 
-    let mut wifi = EspWifi::new(
-        netif_stack,
-        sys_loop_stack,
-        default_nvs,
-    )?;
+    let mut wifi = EspWifi::new(netif_stack, sys_loop_stack, default_nvs)?;
 
     info!("Searching for Wifi network {}", ssid);
 
@@ -77,9 +79,7 @@ pub fn wifi(netif_stack: Arc<EspNetifStack>, sys_loop_stack: Arc<EspSysLoopStack
         bail!("Unexpected Wifi status: {:?}", status);
     }
 
-    let wifi = Wifi {
-        esp_wifi: wifi,
-    };
+    let wifi = Wifi { esp_wifi: wifi };
 
     Ok(wifi)
 }

@@ -1,9 +1,11 @@
 mod light;
 mod server;
+mod storage;
 mod wifi;
 
 use core::time::Duration;
 use std::{
+    str,
     sync::{Arc, Mutex},
     thread,
 };
@@ -11,17 +13,17 @@ use std::{
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
 use esp_idf_hal::peripherals::Peripherals;
-use esp_idf_svc::{
-    sntp,
-    netif::EspNetifStack, nvs::EspDefaultNvs, sysloop::EspSysLoopStack,
+use esp_idf_svc::{netif::EspNetifStack, nvs::EspDefaultNvs, sntp, sysloop::EspSysLoopStack};
+
+use crate::{
+    light::Light,
+    storage::{Storage, StorageBase},
 };
-use esp_idf_svc::nvs_storage::EspNvsStorage;
 
+const SSID: Option<&str> = option_env!("WIFI_SSID");
+const PASS: Option<&str> = option_env!("WIFI_PASS");
 
-use crate::light::Light;
-
-const SSID: &str = env!("WIFI_SSID");
-const PASS: &str = env!("WIFI_PASS");
+const STORAGE_NAME: &str = env!("CARGO_PKG_NAME");
 
 fn main() -> anyhow::Result<()> {
     // Temporary. Will disappear once ESP-IDF 4.4 is released, but for now it is necessary to call this function once,
@@ -33,8 +35,20 @@ fn main() -> anyhow::Result<()> {
     let sys_loop_stack = Arc::new(EspSysLoopStack::new()?);
     let default_nvs = Arc::new(EspDefaultNvs::new()?);
 
+    let storage = Storage::new(default_nvs.clone())?;
+
+    let ssid: String = SSID.map_or_else(
+        || storage.0.clone().get("WIFI_SSID").unwrap_or_default(),
+        |s| s.to_string(),
+    );
+
+    let pass: String = PASS.map_or_else(
+        || storage.0.clone().get("WIFI_PASS").unwrap_or_default(),
+        |s| s.to_string(),
+    );
+
     // Connect to the Wi-Fi network
-    let _wifi = match wifi::wifi(netif_stack.clone(), sys_loop_stack.clone(), default_nvs.clone(), SSID, PASS) {
+    let _wifi = match wifi::wifi(netif_stack, sys_loop_stack, default_nvs, &ssid, &pass) {
         Ok(inner) => inner,
         Err(err) => {
             anyhow::bail!("could not connect to Wi-Fi network: {:?}", err)
@@ -43,8 +57,7 @@ fn main() -> anyhow::Result<()> {
 
     let _sntp = sntp::EspSntp::new_default()?;
 
-    let storage = Arc::new(Mutex::new(EspNvsStorage::new_default(default_nvs.clone(), "my_area", true)?));
-    let _server = server::start(storage.clone());
+    let _server = server::start(&storage);
 
     let peripherals = Peripherals::take().unwrap();
 

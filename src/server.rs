@@ -1,7 +1,6 @@
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
-
 use embedded_svc::httpd::registry::Registry;
 use embedded_svc::httpd::Response;
+use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 use esp_idf_svc::httpd::{Server, ServerRegistry};
 
@@ -15,9 +14,7 @@ pub(crate) fn start(master_storage: &Storage) -> anyhow::Result<Server> {
         .at("/")
         .get(move |_| {
             let ssid = storage.get("WIFI_SSID").unwrap_or_default();
-            dbg!(&ssid);
             let pass = storage.get("WIFI_PASS").unwrap_or_default();
-            dbg!(&pass);
 
             resp(format!(
                 r#"
@@ -25,10 +22,10 @@ pub(crate) fn start(master_storage: &Storage) -> anyhow::Result<Server> {
                   <p>Current Date Time: {:?}</p>
                   <form method = "post" action = "/save" enctype="application/x-www-form-urlencoded">
                     <label for="ssid">WiFi SSID:</label><br>
-                    <input type="text" id="ssid" name="ssid" value="{:?}"><br>
+                    <input type="text" id="ssid" name="WIFI_SSID" value="{:?}"><br>
 
                     <label for="pass">WiFi PASS:</label><br>
-                    <input type="text" id="pass" name="pass" value="{:?}"><br><br>
+                    <input type="text" id="pass" name="WIFI_PASS" value="{:?}"><br><br>
 
                     <input type="submit" value="Submit">
                   </form>
@@ -41,14 +38,16 @@ pub(crate) fn start(master_storage: &Storage) -> anyhow::Result<Server> {
         })?
         .at("/save")
         .post(move |mut req| {
-            // let body = req.as_bytes()?;
-            // dbg!(body);
-            // let val = match req.query_string() {
-            //     Some(s) => s,
-            //     _ => String::from("default"),
-            // };
+            let body = req.as_bytes()?;
+            let allowed_keys = ["WIFI_SSID", "WIFI_PASS"];
 
-            // resp(format!("{:?}", storage2.put("who", val.as_bytes())))
+            url::form_urlencoded::parse(&body).map(|(k, v)| -> anyhow::Result<()>{
+                if allowed_keys.contains(&k.as_ref()) {
+                    storage2.put(&k, v.as_bytes())?;
+                }
+                Ok(())
+            }).for_each(std::mem::drop);
+
             resp("hello")
         })?;
 

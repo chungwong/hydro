@@ -28,7 +28,7 @@ impl StorageBase for Arc<Mutex<EspNvsStorage>> {
 
         match nvs.get_raw(name, buf) {
             Ok(_) => String::from_utf8(a).ok(),
-            Err(err) => None,
+            Err(_) => None,
         }
     }
 

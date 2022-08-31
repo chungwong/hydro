@@ -24,7 +24,7 @@ esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
 esp-idf-hal = "0.38.0"
 log = "0.4.17"
 time = { version = "0.3.13", features = ["formatting"] }
-
+url = "2.2.2"
 
 [build-dependencies]
 anyhow = "1.0.62"

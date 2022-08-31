@@ -5,7 +5,6 @@ mod wifi;
 
 use core::time::Duration;
 use std::{
-    str,
     sync::{Arc, Mutex},
     thread,
 };
@@ -38,12 +37,12 @@ fn main() -> anyhow::Result<()> {
     let storage = Storage::new(default_nvs.clone())?;
 
     let ssid: String = SSID.map_or_else(
-        || storage.0.clone().get("WIFI_SSID").unwrap_or_default(),
+        || storage.0.get("WIFI_SSID").unwrap_or_default(),
         |s| s.to_string(),
     );
 
     let pass: String = PASS.map_or_else(
-        || storage.0.clone().get("WIFI_PASS").unwrap_or_default(),
+        || storage.0.get("WIFI_PASS").unwrap_or_default(),
         |s| s.to_string(),
     );
 

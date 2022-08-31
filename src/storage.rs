@@ -23,11 +23,10 @@ impl StorageBase for Arc<Mutex<EspNvsStorage>> {
             }
         };
 
-        let mut a = vec![0u8; len];
-        let buf: &mut [u8] = &mut a;
+        let mut buf = vec![0u8; len];
 
-        match nvs.get_raw(name, buf) {
-            Ok(_) => String::from_utf8(a).ok(),
+        match nvs.get_raw(name, &mut buf) {
+            Ok(_) => String::from_utf8(buf).ok(),
             Err(_) => None,
         }
     }

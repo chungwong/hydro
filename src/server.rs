@@ -1,8 +1,8 @@
-use embedded_svc::httpd::registry::Registry;
-use embedded_svc::httpd::Response;
+use embedded_svc::httpd::{registry::Registry, Response};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 use esp_idf_svc::httpd::{Server, ServerRegistry};
+use esp_idf_sys::esp_restart;
 
 use crate::storage::{Storage, StorageBase};
 
@@ -22,12 +22,16 @@ pub(crate) fn start(master_storage: &Storage) -> anyhow::Result<Server> {
                   <p>Current Date Time: {:?}</p>
                   <form method = "post" action = "/save" enctype="application/x-www-form-urlencoded">
                     <label for="ssid">WiFi SSID:</label><br>
-                    <input type="text" id="ssid" name="WIFI_SSID" value="{:?}"><br>
+                    <input type="text" id="ssid" name="WIFI_SSID" value="{}"><br>
 
                     <label for="pass">WiFi PASS:</label><br>
-                    <input type="text" id="pass" name="WIFI_PASS" value="{:?}"><br><br>
+                    <input type="text" id="pass" name="WIFI_PASS" value="{}"><br><br>
 
                     <input type="submit" value="Submit">
+                  </form>
+
+                  <form method = "post" action = "/reboot" enctype="application/x-www-form-urlencoded">
+                    <input type="submit" value="Reboot">
                   </form>
                 </div>
                 "#,
@@ -48,7 +52,14 @@ pub(crate) fn start(master_storage: &Storage) -> anyhow::Result<Server> {
                 Ok(())
             }).for_each(std::mem::drop);
 
-            resp("hello")
+            Ok(Response::redirect("/"))
+        })?
+        .at("/reboot")
+        .post(|_| {
+            unsafe {
+                esp_restart();
+            }
+            Ok("".into())
         })?;
 
     server.start(&Default::default())

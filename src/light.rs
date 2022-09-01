@@ -1,4 +1,4 @@
-use core::{ops::RangeBounds, time::Duration};
+use core::{num::ParseIntError, str::FromStr, time::Duration};
 use log::info;
 use std::{
     sync::{Arc, Mutex},
@@ -10,21 +10,22 @@ use std::fmt::Debug;
 use embedded_hal::digital::blocking::OutputPin;
 
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
-pub(crate) struct Light<T, R>
+pub(crate) struct Light<T>
 where
     T: OutputPin + Send + 'static,
-    R: RangeBounds<u8> + 'static + Debug + Send,
+    // R: RangeBounds<u8> + 'static + Debug + Send,
 {
-    pin: T,
-    hour_ranges: Vec<R>,
+    pub(crate) pin: T,
+    pub(crate) hour_ranges: LightHours,
 }
 
-impl<T, R> Light<T, R>
+// impl<T, R> Light<T, R>
+impl<T> Light<T>
 where
     T: OutputPin + Send + 'static,
-    R: RangeBounds<u8> + 'static + Debug + Send,
+    // R: RangeBounds<u8> + 'static + Debug + Send,
 {
-    pub(crate) fn new(pin: T, hour_ranges: Vec<R>) -> Self {
+    pub(crate) fn new(pin: T, hour_ranges: LightHours) -> Self {
         Self { pin, hour_ranges }
     }
 
@@ -54,7 +55,7 @@ where
     /// 21      9          8
     /// 22     10          9
     /// 23     11         10
-    pub(crate) fn toggle(light: Arc<Mutex<Light<T, R>>>) {
+    pub(crate) fn toggle(light: Arc<Mutex<Light<T>>>) {
         thread::spawn(move || loop {
             let utc_now = OffsetDateTime::now_utc();
 
@@ -67,12 +68,11 @@ where
 
             let sleep_secs = if utc_now.year() == 1970 {
                 // sntp is not synced yet
-                info!("turning off light {:?}", light.pin.set_low());
                 1
             } else {
                 let hour = utc_now.hour();
 
-                if light.hour_ranges.iter().any(|range| range.contains(&hour)) {
+                if light.hour_ranges.0.contains(&hour) {
                     info!("turning on light {:?}", light.pin.set_high());
                 } else {
                     info!("turning off light {:?}", light.pin.set_low());
@@ -82,5 +82,35 @@ where
 
             thread::sleep(Duration::from_secs(sleep_secs));
         });
+    }
+}
+
+#[derive(Default, Debug)]
+pub(crate) struct LightHours(pub(crate) Vec<u8>);
+
+impl LightHours {
+    pub(crate) fn to_html_options(&self) -> String {
+        (0u8..=23u8)
+            .map(|h| {
+                let selected = if self.0.contains(&h) { "selected" } else { "" };
+
+                format!("<option value=\"{h}\" {selected}>{h}</option>")
+            })
+            .collect::<Vec<String>>()
+            .join("")
+    }
+}
+
+impl FromStr for LightHours {
+    type Err = ParseIntError;
+
+    fn from_str(hours: &str) -> Result<Self, Self::Err> {
+        Ok(Self(
+            hours
+                .split(',')
+                .map(str::trim)
+                .map(u8::from_str)
+                .collect::<Result<Vec<u8>, Self::Err>>()?,
+        ))
     }
 }

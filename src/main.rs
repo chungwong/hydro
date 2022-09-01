@@ -1,9 +1,13 @@
+#![feature(slice_group_by)]
+
 mod light;
 mod server;
 mod storage;
 mod wifi;
 
+use core::str::FromStr;
 use core::time::Duration;
+
 use std::{
     sync::{Arc, Mutex},
     thread,
@@ -11,11 +15,12 @@ use std::{
 
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
+use embedded_hal::digital::blocking::OutputPin;
 use esp_idf_hal::peripherals::Peripherals;
 use esp_idf_svc::{netif::EspNetifStack, nvs::EspDefaultNvs, sntp, sysloop::EspSysLoopStack};
 
 use crate::{
-    light::Light,
+    light::{Light, LightHours},
     storage::{Storage, StorageBase},
 };
 
@@ -60,10 +65,22 @@ fn main() -> anyhow::Result<()> {
 
     let peripherals = Peripherals::take().unwrap();
 
+    let hours = if let Some(ref hrs) = storage.0.get("LIGHT_HOURS") {
+        if let Ok(hours) = LightHours::from_str(hrs) {
+            hours
+        } else {
+            LightHours::default()
+        }
+    } else {
+        LightHours::default()
+    };
+
     let light = Arc::new(Mutex::new(Light::new(
         peripherals.pins.gpio20.into_output()?,
-        vec![0..=11, 20..=23],
+        hours,
     )));
+
+    light.lock().unwrap().pin.set_low()?;
 
     Light::toggle(light);
 

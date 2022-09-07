@@ -13,20 +13,17 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 pub(crate) struct Light<T>
 where
     T: OutputPin + Send + 'static,
-    // R: RangeBounds<u8> + 'static + Debug + Send,
 {
     pub(crate) pin: T,
-    pub(crate) hour_ranges: LightHours,
+    pub(crate) hours: LightHours,
 }
 
-// impl<T, R> Light<T, R>
 impl<T> Light<T>
 where
     T: OutputPin + Send + 'static,
-    // R: RangeBounds<u8> + 'static + Debug + Send,
 {
-    pub(crate) fn new(pin: T, hour_ranges: LightHours) -> Self {
-        Self { pin, hour_ranges }
+    pub(crate) fn new(pin: T, hours: LightHours) -> Self {
+        Self { pin, hours}
     }
 
     /// Mapping for UTC and local time zones
@@ -72,7 +69,7 @@ where
             } else {
                 let hour = utc_now.hour();
 
-                if light.hour_ranges.0.contains(&hour) {
+                if light.hours.0.contains(&hour) {
                     info!("turning on light {:?}", light.pin.set_high());
                 } else {
                     info!("turning off light {:?}", light.pin.set_low());

@@ -62,7 +62,7 @@ pub(crate) fn wifi(
         ..Default::default()
     }))?;
 
-    wifi.wait_status_with_timeout(Duration::from_secs(20), |status| !status.is_transitional())
+    wifi.wait_status_with_timeout(Duration::from_secs(10), |status| !status.is_transitional())
         .map_err(|e| anyhow::anyhow!("Unexpected Wifi status: {:?}", e))?;
 
     info!("getting Wifi status");

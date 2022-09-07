@@ -8,16 +8,15 @@ mod wifi;
 use core::str::FromStr;
 use core::time::Duration;
 
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-};
+use std::sync::{Arc, Mutex};
 
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
 use embedded_hal::digital::blocking::OutputPin;
 use esp_idf_hal::peripherals::Peripherals;
 use esp_idf_svc::{netif::EspNetifStack, nvs::EspDefaultNvs, sntp, sysloop::EspSysLoopStack};
+
+use hydro::button::Button;
 
 use crate::{
     light::{Light, LightHours},
@@ -63,6 +62,7 @@ fn main() -> anyhow::Result<()> {
 
     let _server = server::start(&storage);
 
+    // let peripherals = Arc::new(Mutex::new(Peripherals::take().unwrap()));
     let peripherals = Peripherals::take().unwrap();
 
     let hours = if let Some(ref hrs) = storage.0.get("LIGHT_HOURS") {
@@ -75,16 +75,26 @@ fn main() -> anyhow::Result<()> {
         LightHours::default()
     };
 
-    let light = Arc::new(Mutex::new(Light::new(
-        peripherals.pins.gpio20.into_output()?,
-        hours,
-    )));
+    let gpio20 = peripherals.pins.gpio20;
+
+    let light = Arc::new(Mutex::new(Light::new(gpio20.into_output()?, hours)));
 
     light.lock().unwrap().pin.set_low()?;
 
     Light::toggle(light);
 
+    let mut boot_button = Button::new(peripherals.pins.gpio9.into_input()?)
+        .set_long_press_duration(Duration::from_secs(1));
+
+    boot_button.set_short_action(Box::new(|_pin| {
+        dbg!("new short press callback");
+    }));
+
+    boot_button.set_long_action(Box::new(|_pin| {
+        dbg!("new long press callback");
+    }));
+
     loop {
-        thread::sleep(Duration::from_secs(5));
+        boot_button.poll();
     }
 }

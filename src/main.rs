@@ -19,7 +19,7 @@ use esp_idf_svc::{netif::EspNetifStack, nvs::EspDefaultNvs, sntp, sysloop::EspSy
 use hydro::button::Button;
 
 use crate::{
-    light::{Light, LightHours},
+    light::{Light, LightCheck, LightHours},
     storage::{Storage, StorageBase},
 };
 
@@ -81,7 +81,7 @@ fn main() -> anyhow::Result<()> {
 
     light.lock().unwrap().pin.set_low()?;
 
-    Light::toggle(light);
+    light.toggle();
 
     let mut boot_button = Button::new(peripherals.pins.gpio9.into_input()?)
         .set_long_press_duration(Duration::from_secs(1));

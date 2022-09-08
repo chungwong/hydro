@@ -10,22 +10,8 @@ use std::fmt::Debug;
 use embedded_hal::digital::blocking::OutputPin;
 
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
-pub(crate) struct Light<T>
-where
-    T: OutputPin + Send + 'static,
-{
-    pub(crate) pin: T,
-    pub(crate) hours: LightHours,
-}
 
-impl<T> Light<T>
-where
-    T: OutputPin + Send + 'static,
-{
-    pub(crate) fn new(pin: T, hours: LightHours) -> Self {
-        Self { pin, hours}
-    }
-
+pub(crate) trait LightCheck {
     /// Mapping for UTC and local time zones
     /// UTC Local(+10) Local(+11)
     ///  0     10         11
@@ -52,8 +38,25 @@ where
     /// 21      9          8
     /// 22     10          9
     /// 23     11         10
-    pub(crate) fn toggle(light: Arc<Mutex<Light<T>>>) {
-        thread::spawn(move || loop {
+    fn toggle(&self);
+}
+
+pub(crate) struct Light<T>
+where
+    T: OutputPin + Send + 'static,
+{
+    pub(crate) pin: T,
+    pub(crate) hours: LightHours,
+}
+
+impl<T> LightCheck for Arc<Mutex<Light<T>>>
+where
+    T: OutputPin + Send + 'static,
+{
+    fn toggle(&self) {
+        let light = self.clone();
+
+        let handle = thread::spawn(move || loop {
             let utc_now = OffsetDateTime::now_utc();
 
             info!(
@@ -61,13 +64,13 @@ where
                 utc_now.format(&Rfc3339)
             );
 
-            let mut light = light.lock().unwrap();
-
             let sleep_secs = if utc_now.year() == 1970 {
                 // sntp is not synced yet
                 1
             } else {
                 let hour = utc_now.hour();
+
+                let mut light = light.lock().unwrap();
 
                 if light.hours.0.contains(&hour) {
                     info!("turning on light {:?}", light.pin.set_high());
@@ -79,6 +82,17 @@ where
 
             thread::sleep(Duration::from_secs(sleep_secs));
         });
+
+        handle.join().unwrap();
+    }
+}
+
+impl<T> Light<T>
+where
+    T: OutputPin + Send + 'static,
+{
+    pub(crate) fn new(pin: T, hours: LightHours) -> Self {
+        Self { pin, hours }
     }
 }
 

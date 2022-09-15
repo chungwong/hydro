@@ -13,8 +13,8 @@ where
     press_time: Instant,
     when_pressed: WhenPressed,
     long_press_duration: Duration,
-    short_action: Callback<I>,
-    long_action: Callback<I>,
+    short_action: Callback<Button<I>>,
+    long_action: Callback<Button<I>>,
 }
 
 pub enum ButtonEvent {
@@ -72,12 +72,12 @@ where
         self
     }
 
-    pub fn set_short_action(&mut self, f: Callback<I>) -> &mut Self {
+    pub fn set_short_action(&mut self, f: Callback<Button<I>>) -> &mut Self {
         self.short_action = f;
         self
     }
 
-    pub fn set_long_action(&mut self, f: Callback<I>) -> &mut Self {
+    pub fn set_long_action(&mut self, f: Callback<Button<I>>) -> &mut Self {
         self.long_action = f;
         self
     }
@@ -116,10 +116,10 @@ where
 
         match event {
             Some(ButtonEvent::ShortPress) => {
-                (self.short_action)(&self.pin);
+                (self.short_action)(self);
             }
             Some(ButtonEvent::LongPress) => {
-                (self.long_action)(&self.pin);
+                (self.long_action)(self);
             }
             _ => {}
         };

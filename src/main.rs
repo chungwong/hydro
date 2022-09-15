@@ -86,8 +86,8 @@ fn main() -> anyhow::Result<()> {
     let mut boot_button = Button::new(peripherals.pins.gpio9.into_input()?)
         .set_long_press_duration(Duration::from_secs(1));
 
-    boot_button.set_short_action(Box::new(|_pin| {
-        dbg!("new short press callback");
+    boot_button.set_short_action(Box::new(|_| {
+        info!("new short press callback");
     }));
 
     boot_button.set_long_action(Box::new(|_pin| {

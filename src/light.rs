@@ -56,7 +56,7 @@ where
     fn toggle(&self) {
         let light = self.clone();
 
-        let handle = thread::spawn(move || loop {
+        thread::spawn(move || loop {
             let utc_now = OffsetDateTime::now_utc();
 
             info!(
@@ -82,8 +82,6 @@ where
 
             thread::sleep(Duration::from_secs(sleep_secs));
         });
-
-        handle.join().unwrap();
     }
 }
 

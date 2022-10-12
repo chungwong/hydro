@@ -61,7 +61,7 @@ pub(crate) fn start(master_storage: &Storage) -> anyhow::Result<Server> {
             .group_by(|(k1, _), (k2, _)| k1 == k2)
             .map(|queries| -> anyhow::Result<bool> {
                 let vals = queries.iter().map(|(_, v)| v.to_string()).collect::<Vec<String>>().join(",");
-                let key = queries[0].0.to_owned();
+                let key = queries[0].0.clone();
 
                 storage2.put(&key, vals.as_bytes())
             })

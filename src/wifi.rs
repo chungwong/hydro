@@ -2,7 +2,9 @@ use std::{sync::Arc, time::*};
 
 use anyhow::bail;
 use embedded_svc::wifi::{
-    self, AuthMethod, ClientConfiguration, ClientConnectionStatus, ClientIpStatus, ClientStatus,
+    self, AccessPointConfiguration, AuthMethod, ClientConfiguration, ClientConnectionStatus,
+    ClientIpStatus, ClientStatus,
+    Configuration::{Client, Mixed},
     Wifi as _,
 };
 use esp_idf_svc::{
@@ -12,7 +14,19 @@ use log::info;
 
 #[allow(unused)]
 pub(crate) struct Wifi {
-    pub esp_wifi: EspWifi,
+    pub(crate) esp_wifi: EspWifi,
+}
+
+impl Wifi {
+    pub(crate) fn disable_ap(&mut self) -> anyhow::Result<()> {
+        if let Ok(Mixed(client_configuration, _)) = self.esp_wifi.get_configuration() {
+            info!("Change Wifi to ClientConfiguration");
+            self.esp_wifi
+                .set_configuration(&Client(client_configuration))?;
+        }
+
+        Ok(())
+    }
 }
 
 pub(crate) fn wifi(
@@ -54,13 +68,21 @@ pub(crate) fn wifi(
     };
 
     info!("setting Wifi configuration");
-    wifi.set_configuration(&wifi::Configuration::Client(ClientConfiguration {
-        ssid: ssid.into(),
-        password: psk.into(),
-        channel,
-        auth_method,
-        ..Default::default()
-    }))?;
+    wifi.set_configuration(&Mixed(
+        ClientConfiguration {
+            ssid: ssid.into(),
+            password: psk.into(),
+            channel,
+            auth_method,
+            ..Default::default()
+        },
+        AccessPointConfiguration {
+            ssid: "ESP32 C3".into(),
+            password: "admin".into(),
+            channel: channel.unwrap_or(1),
+            ..Default::default()
+        },
+    ))?;
 
     wifi.wait_status_with_timeout(Duration::from_secs(10), |status| !status.is_transitional())
         .map_err(|e| anyhow::anyhow!("Unexpected Wifi status: {:?}", e))?;

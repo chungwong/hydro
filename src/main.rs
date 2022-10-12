@@ -8,13 +8,17 @@ mod wifi;
 use core::str::FromStr;
 use core::time::Duration;
 
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
 
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 
 use embedded_hal::digital::blocking::OutputPin;
 use esp_idf_hal::peripherals::Peripherals;
 use esp_idf_svc::{netif::EspNetifStack, nvs::EspDefaultNvs, sntp, sysloop::EspSysLoopStack};
+use log::{error, info};
 
 use hydro::button::Button;
 
@@ -51,8 +55,8 @@ fn main() -> anyhow::Result<()> {
     );
 
     // Connect to the Wi-Fi network
-    let _wifi = match wifi::wifi(netif_stack, sys_loop_stack, default_nvs, &ssid, &pass) {
-        Ok(inner) => inner,
+    let wifi = match wifi::wifi(netif_stack, sys_loop_stack, default_nvs, &ssid, &pass) {
+        Ok(inner) => Arc::new(Mutex::new(inner)),
         Err(err) => {
             anyhow::bail!("could not connect to Wi-Fi network: {:?}", err)
         }
@@ -90,11 +94,18 @@ fn main() -> anyhow::Result<()> {
         info!("new short press callback");
     }));
 
-    boot_button.set_long_action(Box::new(|_pin| {
-        dbg!("new long press callback");
+    let wifi_clone = wifi;
+
+    boot_button.set_long_action(Box::new(move |_| {
+        if let Ok(mut wifi) = wifi_clone.lock() {
+            if let Err(e) = wifi.disable_ap() {
+                error!("{:?}", e);
+            }
+        }
     }));
 
     loop {
         boot_button.poll();
+        thread::sleep(Duration::from_millis(10));
     }
 }
